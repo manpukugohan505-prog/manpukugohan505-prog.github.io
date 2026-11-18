@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.manpukugohan505_prog.twa",
+    "sha256_cert_fingerprints": ["39:84:FF:C7:F1:CA:ED:EF:DA:03:C7:E4:4B:48:68:28:C8:03:90:1A:63:75:47:0C:C8:D5:62:68:98:DA:49:20"]
+  }
+}]
