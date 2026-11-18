@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1d2a44">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>スライドパズル｜10ステージ</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+  --bg:#f3f1ec; --fg:#1d2a44; --muted:#5c6679; --board:#1d2a44;
+  --t1:#e9a23b; --t2:#d8e2dc; --tfg:#1d2a44; --done:#2f8f6b; --btn:#1d2a44; --btnfg:#f3f1ec; --star:#e9a23b; --card:#e6e2d8;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10172a; --fg:#e8ecf5; --muted:#9aa5bd; --board:#0a0f1d;
+    --t2:#3b4a6b; --tfg:#f1f4fb; --done:#3fb98a; --btn:#e9a23b; --btnfg:#10172a; --card:#1b2542;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10172a; --fg:#e8ecf5; --muted:#9aa5bd; --board:#0a0f1d;
+  --t2:#3b4a6b; --tfg:#f1f4fb; --done:#3fb98a; --btn:#e9a23b; --btnfg:#10172a; --card:#1b2542;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px 32px}
+h1{font-size:1.6rem;margin:8px 0 4px;letter-spacing:.08em}
+.sub{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+[hidden]{display:none!important}
+#grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;width:min(92vw,420px)}
+.st{aspect-ratio:1;border:0;border-radius:12px;background:var(--card);color:var(--fg);font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.st b{font-size:1.25rem}
+.st i{font-style:normal;font-size:.62rem;color:var(--star);letter-spacing:-1px;min-height:1em}
+.st small{font-size:.6rem;color:var(--muted)}
+.st[disabled]{opacity:.35;cursor:not-allowed}
+.top{display:flex;align-items:center;justify-content:space-between;width:min(92vw,420px);margin-bottom:10px}
+.top h2{font-size:1.1rem;margin:0}
+#ref{width:52px;height:52px;border-radius:8px;background-size:cover;border:2px solid var(--fg)}
+.stats{display:flex;gap:28px;margin-bottom:12px;font-variant-numeric:tabular-nums}
+.stats div{text-align:center}
+.stats b{display:block;font-size:1.4rem}
+.stats span{font-size:.8rem;color:var(--muted)}
+#board{position:relative;width:min(92vw,420px);aspect-ratio:1;background:var(--board);border-radius:14px;touch-action:manipulation}
+.tile{position:absolute;display:flex;align-items:flex-start;justify-content:flex-start;border:0;border-radius:8px;padding:4px 6px;
+  font:700 clamp(1.2rem,7vw,2rem)/1 inherit;font-family:inherit;cursor:pointer;
+  background-color:var(--t2);color:var(--tfg);transition:left .14s ease,top .14s ease}
+.tile.num{align-items:center;justify-content:center}
+.tile.odd.num{background-color:var(--t1);color:#1d2a44}
+.tile.pic{font-size:.8rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.tile:focus-visible,button:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+#board.won .tile{box-shadow:0 0 0 2px var(--done) inset}
+.msg{min-height:1.6em;margin:14px 0 6px;font-weight:700;color:var(--done);text-align:center}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.row button{border:2px solid var(--btn);background:transparent;color:var(--fg);border-radius:999px;padding:10px 18px;font:inherit;font-weight:600;cursor:pointer}
+.row button.main{background:var(--btn);color:var(--btnfg)}
+.note{color:var(--muted);font-size:.8rem;margin-top:16px;text-align:center}
+.tile.hint{animation:pulse .9s ease-in-out infinite;z-index:2;box-shadow:0 0 0 3px var(--star)}
+@keyframes pulse{50%{transform:scale(.92)}}
+.daily{width:min(92vw,420px);margin-bottom:14px;border:0;border-radius:12px;padding:14px;font:inherit;font-weight:700;background:var(--btn);color:var(--btnfg);cursor:pointer}
+.ad{width:min(92vw,420px);height:50px;margin-top:18px;border:1px dashed var(--muted);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.75rem}
+@media (prefers-reduced-motion:reduce){.tile{transition:none;animation:none}}
+</style>
+</head>
+<body>
+
+<section id="menu" style="display:flex;flex-direction:column;align-items:center">
+  <h1>スライドパズル</h1>
+  <p class="sub">ステージを選んで、星3つを目指そう</p>
+  <button id="daily" class="daily"></button>
+  <div id="grid"></div>
+  <p class="note">星は少ない手数でクリアするほど増えます。前のステージをクリアすると次が開きます。</p>
+  <div class="row" style="margin-top:14px"><button id="sfx"></button><button id="bgm"></button></div>
+</section>
+
+<section id="game" hidden style="display:flex;flex-direction:column;align-items:center">
+  <div class="top">
+    <h2 id="title"></h2>
+    <div id="ref" hidden aria-label="完成の見本"></div>
+  </div>
+  <div class="stats">
+    <div><b id="moves">0</b><span>手数</span></div>
+    <div><b id="par">-</b><span>星3の目安</span></div>
+    <div><b id="time">0:00</b><span>時間</span></div>
+  </div>
+  <div id="board" role="group" aria-label="パズル盤面"></div>
+  <div class="msg" id="msg" aria-live="polite"></div>
+  <div class="row">
+    <button id="back">ステージ選択</button>
+    <button id="retry">やり直す</button>
+    <button id="hint">ヒント(3)</button>
+    <button class="main" id="next" hidden>次のステージ</button>
+  </div>
+</section>
+
+<div class="ad" id="adBanner" hidden>広告バナー枠（320×50）</div>
+<script>
+(function(){
+  var STAGES=[
+    {n:3,p:-1},{n:3,p:0},{n:3,p:1},{n:4,p:-1},{n:4,p:0},
+    {n:4,p:1},{n:4,p:2},{n:5,p:-1},{n:5,p:2},{n:5,p:0}
+  ];
+  var PAR={3:35,4:90,5:180};
+  var SVG=[
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2a6b"/><stop offset=".6" stop-color="#e9743b"/><stop offset="1" stop-color="#f7c35a"/></linearGradient></defs><rect width="100" height="100" fill="url(#a)"/><circle cx="68" cy="48" r="13" fill="#fff3c9"/><polygon points="0,100 0,68 22,42 42,70 62,52 100,86 100,100" fill="#3a2a55"/><polygon points="0,100 0,84 28,66 55,88 80,74 100,92 100,100" fill="#1a1230"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#18284f"/><path d="M0 18 Q40 30 62 58 T100 92" stroke="#5b3a2e" stroke-width="5" fill="none"/><path d="M30 30 Q44 20 60 24" stroke="#5b3a2e" stroke-width="3" fill="none"/><g fill="#f6b3c8"><circle cx="30" cy="30" r="8"/><circle cx="60" cy="24" r="9"/><circle cx="50" cy="48" r="8"/><circle cx="72" cy="66" r="9"/><circle cx="16" cy="20" r="6"/><circle cx="86" cy="86" r="8"/></g><g fill="#fff"><circle cx="30" cy="30" r="2"/><circle cx="60" cy="24" r="2"/><circle cx="50" cy="48" r="2"/><circle cx="72" cy="66" r="2"/></g></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e8f1ee"/><path d="M0 40 Q15 22 30 40 T60 40 T100 40 V100 H0Z" fill="#7fb4c9"/><path d="M0 58 Q15 40 30 58 T60 58 T100 58 V100 H0Z" fill="#3f86a8"/><path d="M0 76 Q15 58 30 76 T60 76 T100 76 V100 H0Z" fill="#1f5a80"/><circle cx="78" cy="18" r="9" fill="#e9a23b"/></svg>'
+  ];
+  var URI=SVG.map(function(s){return 'url("data:image/svg+xml,'+encodeURIComponent(s)+'")'});
+
+  var stars=[], cur=0, n=3, pic=-1, tiles=[], moves=0, start=0, timer=null, won=false, els={};
+  var $=function(id){return document.getElementById(id)};
+
+  /* ---- 広告フック: アプリ化後にAdMobなどを接続する場所 ---- */
+  var ADS_ENABLED=false, clears=0;
+  var AdHooks={
+    banner:function(){var el=$('adBanner'); if(el)el.hidden=!ADS_ENABLED},
+    interstitial:function(){/* ステージ3回クリアごとに呼ばれる。ここで全画面広告を表示 */},
+    rewarded:function(done){/* リワード広告を再生し、視聴完了後にdone()を呼ぶ。今は即付与 */done()}
+  };
+
+  /* ---- 音 ---- */
+  var AC=null, sfxOn=true, bgmOn=false, bgmT=null, bstep=0;
+  try{var op=JSON.parse(localStorage.getItem('slide2-opt')||'{}'); if(op.sfx===false)sfxOn=false; if(op.bgm)bgmOn=true}catch(e){}
+  function saveOpt(){try{localStorage.setItem('slide2-opt',JSON.stringify({sfx:sfxOn,bgm:bgmOn}))}catch(e){}}
+  function ctx(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}} if(AC&&AC.state==='suspended')AC.resume(); return AC}
+  function tone(f,t0,d,type,vol){
+    var c=ctx(); if(!c)return;
+    var o=c.createOscillator(), g=c.createGain(), t=c.currentTime+t0;
+    o.type=type||'sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+d+.05);
+  }
+  function sfx(k){
+    if(!sfxOn)return;
+    if(k==='move')tone(520,0,.08,'triangle',.15);
+    else if(k==='hint')tone(880,0,.12,'sine',.12);
+    else if(k==='win'){[523,659,784,1047].forEach(function(f,i){tone(f,i*.12,.3,'sine',.2)})}
+  }
+  function bgmStart(){
+    if(bgmT||!bgmOn)return;
+    var seq=[262,330,392,330,294,392,440,392];
+    bgmT=setInterval(function(){tone(seq[bstep%8],0,.9,'sine',.05); if(bstep%4===0)tone(131,0,1.6,'sine',.05); bstep++},600);
+  }
+  function bgmStop(){clearInterval(bgmT);bgmT=null}
+  function updOpt(){$('sfx').textContent='効果音 '+(sfxOn?'オン':'オフ'); $('bgm').textContent='BGM '+(bgmOn?'オン':'オフ')}
+
+  /* ---- 今日のチャレンジ ---- */
+  function today(){var d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate()}
+  function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function dailyInfo(){var d=today();return {n:4,p:d%3,seed:d}}
+  function dayNum(d){return Math.round(Date.UTC(Math.floor(d/10000),Math.floor(d/100)%100-1,d%100)/86400000)}
+  var daily={date:0,stars:0,streak:0};
+  try{var dd=JSON.parse(localStorage.getItem('slide2-daily')||'null'); if(dd)daily=dd}catch(e){}
+  function saveDaily(k){
+    var t=today();
+    if(daily.date!==t){daily.streak=(daily.date&&dayNum(t)-dayNum(daily.date)===1)?daily.streak+1:1; daily.date=t; daily.stars=0}
+    if(k>daily.stars)daily.stars=k;
+    try{localStorage.setItem('slide2-daily',JSON.stringify(daily))}catch(e){}
+  }
+  function renderDaily(){
+    var t=today(), done=daily.date===t&&daily.stars>0;
+    var alive=daily.streak&&daily.date&&(daily.date===t||dayNum(t)-dayNum(daily.date)===1);
+    $('daily').textContent='今日のチャレンジ '+(done?starStr(daily.stars):'')+(alive?'  連続'+daily.streak+'日':'');
+  }
+
+  /* ---- ヒント ---- */
+  var hints=3, lastMoved=0;
+  function hint(){
+    if(won)return;
+    if(hints<=0){AdHooks.rewarded(function(){hints=3;$('hint').textContent='ヒント(3)'});return}
+    var b=tiles.indexOf(0), best=0, bd=99, c=xy(b);
+    nb(b).forEach(function(j){
+      var v=tiles[j]; if(v===lastMoved)return;
+      var tx=(v-1)%n, ty=Math.floor((v-1)/n), a=xy(j);
+      var d=(Math.abs(c.x-tx)+Math.abs(c.y-ty))-(Math.abs(a.x-tx)+Math.abs(a.y-ty));
+      if(d<bd){bd=d;best=v}
+    });
+    if(!best)return;
+    hints--; $('hint').textContent=hints>0?'ヒント('+hints+')':'ヒント(広告で回復)';
+    sfx('hint'); els[best].classList.add('hint');
+  }
+  var board=$('board');
+
+  try{var sv=JSON.parse(localStorage.getItem('slide2-stars')||'[]'); if(Array.isArray(sv))stars=sv}catch(e){}
+  function saveStars(){try{localStorage.setItem('slide2-stars',JSON.stringify(stars))}catch(e){}}
+  function starStr(k){return k?'★★★'.slice(0,k)+'☆☆☆'.slice(0,3-k):''}
+
+  function renderMenu(){
+    var g=$('grid'); g.innerHTML=''; renderDaily();
+    STAGES.forEach(function(s,i){
+      var b=document.createElement('button'); b.className='st';
+      var open=i===0||stars[i-1]>0;
+      b.disabled=!open;
+      b.innerHTML='<b>'+(i+1)+'</b><i>'+starStr(stars[i]||0)+'</i><small>'+s.n+'×'+s.n+'</small>';
+      b.setAttribute('aria-label','ステージ'+(i+1)+(open?'':'（未開放）'));
+      b.addEventListener('click',function(){openStage(i)});
+      g.appendChild(b);
+    });
+  }
+  function show(name){
+    $('menu').hidden=name!=='menu'; $('game').hidden=name!=='game';
+    $('menu').style.display=name==='menu'?'flex':'none';
+    $('game').style.display=name==='game'?'flex':'none';
+  }
+  function xy(i){return {x:i%n,y:Math.floor(i/n)}}
+  function nb(i){
+    var p=xy(i),r=[];
+    if(p.x>0)r.push(i-1); if(p.x<n-1)r.push(i+1);
+    if(p.y>0)r.push(i-n); if(p.y<n-1)r.push(i+n);
+    return r;
+  }
+  function build(){
+    board.innerHTML=''; els={}; board.classList.remove('won');
+    var size=100/n;
+    for(var v=1;v<n*n;v++){
+      var b=document.createElement('button');
+      b.className='tile '+(pic<0?'num'+(v%2?' odd':''):'pic');
+      b.textContent=v;
+      b.setAttribute('aria-label',v+'のタイル');
+      b.style.width='calc('+size+'% - 6px)';
+      b.style.height='calc('+size+'% - 6px)';
+      if(pic>=0){
+        var gx=(v-1)%n, gy=Math.floor((v-1)/n);
+        b.style.backgroundImage=URI[pic];
+        b.style.backgroundSize=(n*100)+'% '+(n*100)+'%';
+        b.style.backgroundPosition=(gx/(n-1)*100)+'% '+(gy/(n-1)*100)+'%';
+      }
+      b.addEventListener('click',(function(val){return function(){tap(val)}})(v));
+      board.appendChild(b); els[v]=b;
+    }
+  }
+  function place(){
+    var size=100/n;
+    for(var i=0;i<tiles.length;i++){
+      var v=tiles[i]; if(!v)continue;
+      var p=xy(i);
+      els[v].style.left='calc('+(p.x*size)+'% + 3px)';
+      els[v].style.top='calc('+(p.y*size)+'% + 3px)';
+    }
+  }
+  function solved(){for(var i=0;i<tiles.length-1;i++)if(tiles[i]!==i+1)return false;return true}
+  function fmt(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+  function tick(){$('time').textContent=fmt(Math.floor((Date.now()-start)/1000))}
+
+  function openStage(i){
+    cur=i; var s=i<0?dailyInfo():STAGES[i]; n=s.n; pic=s.p; hints=3; $('hint').textContent='ヒント(3)';
+    $('title').textContent=i<0?'今日のチャレンジ（'+n+'×'+n+'・絵柄）':'ステージ '+(i+1)+'（'+n+'×'+n+(pic<0?'・数字':'・絵柄')+'）';
+    $('par').textContent=PAR[n];
+    var r=$('ref');
+    if(pic>=0){r.hidden=false;r.style.backgroundImage=URI[pic]}else{r.hidden=true}
+    show('game'); shuffle();
+  }
+  function shuffle(){
+    clearInterval(timer); timer=null; won=false; moves=0; lastMoved=0;
+    $('moves').textContent=0; $('time').textContent='0:00';
+    $('msg').textContent=''; $('next').hidden=true;
+    build();
+    tiles=[]; for(var i=1;i<n*n;i++)tiles.push(i); tiles.push(0);
+    var blank=n*n-1, prev=-1, R=cur<0?mulberry(dailyInfo().seed):Math.random;
+    for(var k=0;k<n*n*25;k++){
+      var o=nb(blank).filter(function(x){return x!==prev});
+      var nx=o[Math.floor(R()*o.length)];
+      tiles[blank]=tiles[nx]; tiles[nx]=0; prev=blank; blank=nx;
+    }
+    if(solved()&&cur>=0){shuffle();return}
+    place();
+  }
+  function tap(v){
+    if(won)return;
+    var i=tiles.indexOf(v), b=tiles.indexOf(0);
+    if(nb(i).indexOf(b)<0)return;
+    if(!timer){start=Date.now();timer=setInterval(tick,500)}
+    tiles[b]=v; tiles[i]=0; moves++; var hh=board.querySelector('.hint'); if(hh)hh.classList.remove('hint'); lastMoved=v; sfx('move');
+    $('moves').textContent=moves;
+    place();
+    if(solved()){
+      won=true; clearInterval(timer); tick(); board.classList.add('won');
+      var p=PAR[n], k=moves<=p?3:(moves<=p*1.6?2:1);
+      if(cur<0)saveDaily(k); else if(k>(stars[cur]||0)){stars[cur]=k; saveStars()}
+      sfx('win'); clears++; if(clears%3===0)AdHooks.interstitial();
+      $('msg').textContent='クリア！ '+starStr(k)+'（'+moves+'手）';
+      if(cur>=0&&cur<STAGES.length-1)$('next').hidden=false;
+      else if(cur>=0)$('msg').textContent+=' 全ステージ制覇！';
+    }
+  }
+  $('back').addEventListener('click',function(){clearInterval(timer);renderMenu();show('menu')});
+  $('retry').addEventListener('click',shuffle);
+  $('next').addEventListener('click',function(){openStage(cur+1)});
+  $('daily').addEventListener('click',function(){openStage(-1)});
+  $('hint').addEventListener('click',hint);
+  $('sfx').addEventListener('click',function(){sfxOn=!sfxOn;saveOpt();updOpt();sfx('move')});
+  $('bgm').addEventListener('click',function(){bgmOn=!bgmOn;saveOpt();updOpt();if(bgmOn)bgmStart();else bgmStop()});
+  document.addEventListener('pointerdown',function(){if(bgmOn)bgmStart()},{once:true});
+  document.addEventListener('visibilitychange',function(){if(document.hidden)bgmStop();else if(bgmOn)bgmStart()});
+  updOpt(); AdHooks.banner();
+  renderMenu(); show('menu');
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
+</body>
+</html>
